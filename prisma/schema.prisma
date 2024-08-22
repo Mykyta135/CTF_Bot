@@ -1,0 +1,40 @@
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  name         String
+  surname      String
+  age          Int
+  university   String
+  group        String
+  course       Int
+  source       String
+  contact      Int
+
+  team        Team?      @relation(fields: [teamCode], references: [tid])
+  teamCode    String      @default("")    
+
+  userState    String  
+  chat_id      Int      @unique
+
+  isBlocked   Boolean @default(false)
+}
+
+model Team {
+  tid           String   @id @default(auto()) @map("_id") @db.ObjectId
+  name          String
+
+  isTestSent    Boolean @default(false)
+  isTestValid   Boolean @default(false)  
+
+  isEvent       Boolean @default(false)
+  
+  members      User[]
+}

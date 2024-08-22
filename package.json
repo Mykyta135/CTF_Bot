@@ -1,0 +1,20 @@
+{
+  "dependencies": {
+    "@prisma/client": "^5.18.0",
+    "dotenv": "^16.4.5",
+    "eslint": "^9.9.0",
+    "nodemon": "^3.1.4",
+    "typescript": "^5.5.4",
+    "typescript-telegram-bot-api": "^0.2.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^22.3.0",
+    "prisma": "^5.18.0"
+  },
+  "scripts": {
+    "dev": "nodemon --exec ts-node bot.ts",
+    "build": "tsc",
+    "prisma": "npx prisma"
+  }
+}
