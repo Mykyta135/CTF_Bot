@@ -3,45 +3,69 @@ import 'dotenv/config';
 import { RegistrationScene } from './scenes/registrationScene';
 import { HomeScene } from './scenes/homeScene';
 import { adminScene } from './scenes/adminScenes/adminScene';
-import { trackTypedMessages } from './utils/trackTypedMessages';
+import { trackSpamFromUser } from './utils/trackSpamFromUser';
 import { logOfUser } from './utils/logOfUser';
 
 import { manageCache } from './utils/manageCache';
+import { Message } from 'typescript-telegram-bot-api/dist/types';
 export const bot = new TelegramBot({ botToken: process.env.TELEGRAM_TOKEN! });
 
 bot.startPolling();
 const userStateCache = new Map<number, string>();
 const isUserBlocked = new Map<number, boolean>();
 
-bot.on('message', async (message) => {
-    await trackTypedMessages(message, 5000, 5);
 
-    const { userState, userBlocked } = await manageCache(message, userStateCache, isUserBlocked);
-
-    if (userBlocked) {
-        await bot.sendMessage({ chat_id: message.chat.id, text: 'Вас заблоковано на 5 хвилин' });
-    } else {
-        switch (message.text) {
-            case '/start':
-
-                if (userState === 'registration') {
-                    logOfUser(message, "entered registration scene");
-                    await RegistrationScene(message);
-                } else if (userState === 'home') {
-                    logOfUser(message, "entered home scene");
-                    await HomeScene(message, false);
-                }
+export const initialScene = async (message?: Message) => {
+    bot.removeAllListeners('message');
+    bot.removeAllListeners('callback_query');
 
 
-                break;
-            case 'ParadaParadnaNaParadniyParadi':
-                await adminScene(message);
-                break;
+    // цей condition треба, щоб активувати початкову сцену при переході з іниших сцен 
+    if (message) {
+        const { userState, userBlocked } = await manageCache(message, userStateCache, isUserBlocked);
+        await trackSpamFromUser(message, 5000, 5, isUserBlocked);
+
+        logOfUser(message, `User state: ${userState}, User blocked: ${userBlocked}`);
+
+        if (!userBlocked) {
+            if (userState === 'registration') {
+                await RegistrationScene(message, userStateCache);
+            } else if (userState === 'home') {
+                await HomeScene(message, isUserBlocked, false);
+            }
+        } else {
+            await bot.sendMessage({ chat_id: message.chat.id, text: "Ви заблоковані" });
+            await logOfUser(message, "User is blocked");
         }
-
     }
 
+    else
+        bot.on('message', async (message) => {
+            const { userState, userBlocked } = await manageCache(message, userStateCache, isUserBlocked);
+            await trackSpamFromUser(message, 5000, 5, isUserBlocked);
+
+            logOfUser(message, `User state: ${userState}, User blocked: ${userBlocked}`);
+
+            switch (message.text) {
+                case "/ParadaParadnaNaParadniyParadi":
+                    await adminScene(message, isUserBlocked, userStateCache);
+                    break;
+                case '/start':
+                    if (!userBlocked) {
+                        if (userState === 'registration') {
+                            await RegistrationScene(message, userStateCache);
+                        } else if (userState === 'home') {
+                            await HomeScene(message, isUserBlocked, false);
+                        }
+                    } else {
+                        await bot.sendMessage({ chat_id: message.chat.id, text: "Ви заблоковані" });
+                        await logOfUser(message, "User is blocked");
+                    }
+                    break;
+
+            }
+        })
+}
 
 
-
-});
+initialScene();

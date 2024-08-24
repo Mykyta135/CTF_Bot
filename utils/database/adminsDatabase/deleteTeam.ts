@@ -30,7 +30,6 @@ export const deleteTeam = async (query: CallbackQuery, teamId: string) => {
         isTestSent: team?.isTestSent ?? false
     },
 
-
         await prisma.user.updateMany({
             where: { teamCode: teamId },
             data: { teamCode: "" },

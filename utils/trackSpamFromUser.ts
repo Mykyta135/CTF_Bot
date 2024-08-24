@@ -9,7 +9,7 @@ interface UserActivity {
 const userMessageCounts: Record<number, UserActivity> = {};
 const prisma = new PrismaClient();
 
-export const trackTypedMessages = async (message: Message, TIME_FRAME: number, MAX_MESSAGES: number) => {
+export const trackSpamFromUser = async (message: Message, TIME_FRAME: number, MAX_MESSAGES: number, isUserBlocked: Map<number, boolean>) => {
     const userId = message.chat.id
     const now = Date.now();
 
@@ -23,16 +23,20 @@ export const trackTypedMessages = async (message: Message, TIME_FRAME: number, M
     userActivity.lastMessageTime.push(now);
 
     if (userActivity.lastMessageTime.length > MAX_MESSAGES) {
-        const b = await prisma.user.update({
+        await prisma.user.update({
             where: {
                 chat_id: userId,
             },
             data: {
                 isBlocked: true,
             },
-        });
+        }).then((b) => {
+            isUserBlocked!.set(message.chat.id, b.isBlocked);
+        })
 
-        return b.isBlocked
+
+    } else {
+        return false
     }
 
 

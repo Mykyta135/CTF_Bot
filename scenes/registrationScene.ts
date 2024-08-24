@@ -1,5 +1,5 @@
 import { Message } from 'typescript-telegram-bot-api/dist/types';
-import { bot } from '../bot';
+import { bot, initialScene } from '../bot';
 import { handleUserInput } from '../utils/handleUserInput';
 import { createUser } from '../utils/database/createUser';
 import { handleUserContact } from '../utils/handleUserContact';
@@ -16,9 +16,10 @@ import {
 
 } from '../validation/UserSchema';
 import { HomeScene } from './homeScene';
+import { logOfUser } from '../utils/logOfUser';
 
-export const RegistrationScene = async (message: Message) => {
-
+export const RegistrationScene = async (message: Message, userStateCache: Map<number, string>) => {
+    logOfUser(message, "entered registration scene");
     await bot.sendMessage({ chat_id: message.chat.id, text: 'Ласкаво просимо до CТF боту' });
 
 
@@ -61,7 +62,7 @@ export const RegistrationScene = async (message: Message) => {
         teamCode: '',
         isTestPassed: false,
     }, message.chat.id);
-
-    await HomeScene(message, false);
+    userStateCache.set(message.chat.id, 'home');
+    await initialScene(message);
 };
 

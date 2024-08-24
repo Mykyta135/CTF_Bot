@@ -7,13 +7,16 @@ import { declineTeam } from "../../utils/database/adminsDatabase/declineTeam";
 import { adminScene } from "./adminScene";
 import { editInlineKeyboard } from "../../utils/keyboards/inlineKeyboards/editInlineKeyboard";
 import { undoDeleteTeam } from "../../utils/database/adminsDatabase/undoDeletedTeam";
+import { logOfUser } from "../../utils/logOfUser";
 
 const prisma = new PrismaClient()
-const TEAMS_PER_PAGE = 1; 
+const TEAMS_PER_PAGE = 1;
 
-export const handleUsersScenePagination = async (message: Message, query: CallbackQuery, page: number = 0) => {
+export const handleTeamsScenePagination = async (message: Message, query: CallbackQuery, page: number = 0, isUserBlocked: Map<number, boolean>) => {
     bot.removeAllListeners('message');
     bot.removeAllListeners('callback_query');
+    logOfUser(message, "Entered Handle Teams Pagination Scene");
+
     const skip = page * TEAMS_PER_PAGE;
 
     const teams = await prisma.team.findMany({
@@ -37,11 +40,11 @@ export const handleUsersScenePagination = async (message: Message, query: Callba
 
     bot.on('callback_query', async (query) => {
         const teamId = query.data!.split('_')[2];
-      
+
         if (query.data!.includes('delete_team')) {
             await deleteTeam(query, teamId);
         }
-       
+
         if (query.data!.includes('aproove_team')) {
             await aprooveTeam(query, teamId);
         }
@@ -49,15 +52,15 @@ export const handleUsersScenePagination = async (message: Message, query: Callba
             await declineTeam(query, teamId);
         }
         if (query.data === 'back') {
-            await adminScene(message);
+            await adminScene(message, isUserBlocked);
         }
         if (query.data!.includes('previous_page')) {
             const prevPage = parseInt(query.data!.split('_')[2]);
-            await handleUsersScenePagination(message, query, prevPage);
+            await handleTeamsScenePagination(message, query, prevPage, isUserBlocked);
         }
         if (query.data!.includes('next_page')) {
             const nextPage = parseInt(query.data!.split('_')[2]);
-            await handleUsersScenePagination(message, query, nextPage);
+            await handleTeamsScenePagination(message, query, nextPage, isUserBlocked);
         }
         await bot.answerCallbackQuery({ callback_query_id: query.id! });
     });

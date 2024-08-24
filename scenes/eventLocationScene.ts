@@ -1,6 +1,6 @@
 import { CallbackQuery } from "typescript-telegram-bot-api/dist/types";
 import { editInlineKeyboard } from "../utils/keyboards/inlineKeyboards/editInlineKeyboard";
-import { bot } from "../bot";
+import { bot, initialScene } from "../bot";
 import { HomeScene } from "./homeScene";
 
 export const eventLocationScene = async (query: CallbackQuery) => {
@@ -10,7 +10,7 @@ export const eventLocationScene = async (query: CallbackQuery) => {
 
     bot.on('callback_query', async (query) => {
         if (query.data === 'back') {
-            await HomeScene(query.message!, true, query);
+            await initialScene(query.message);
         }
     })
 

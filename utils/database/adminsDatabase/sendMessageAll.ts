@@ -1,5 +1,5 @@
 import { PrismaClient } from "@prisma/client";
-import { bot } from "../../../bot";
+import { bot, initialScene } from "../../../bot";
 import { User } from "@prisma/client";
 import { adminScene } from "../../../scenes/adminScenes/adminScene";
 
@@ -12,7 +12,7 @@ export const sendMessageAll = async () => {
             await bot.sendMessage({ chat_id: user.chat_id, text: msg.text! });
         }
         if (msg.text) {
-            await adminScene(msg);
+            await initialScene(msg);
         }
     })
 

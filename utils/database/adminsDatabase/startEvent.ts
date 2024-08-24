@@ -1,5 +1,5 @@
 import { PrismaClient } from "@prisma/client";
-import { bot } from "../../../bot";
+import { bot, initialScene } from "../../../bot";
 import { HomeScene } from "../../../scenes/homeScene";
 import { Message } from "typescript-telegram-bot-api/dist/types";
 
@@ -33,5 +33,5 @@ export const startEvent = async (message: Message) => {
 
     })
 
-    await HomeScene(message);
+    await initialScene(message);
 }

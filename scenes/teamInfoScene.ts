@@ -1,7 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 import { CallbackQuery, Message } from "typescript-telegram-bot-api/dist/types";
 import { findUsersTeam } from "../utils/database/findUsersTeam";
-import { bot } from "../bot";
+import { bot, initialScene } from "../bot";
 import { teamSceneKeyboardLayout } from "../utils/keyboards/keyboardLayouts/teamSceneLayout";
 import { editInlineKeyboard } from "../utils/keyboards/inlineKeyboards/editInlineKeyboard";
 import { HomeScene } from "./homeScene";
@@ -23,7 +23,7 @@ export const teamInfoScene = async (message: Message, query: CallbackQuery) => {
 
 
 
-        bot.once('callback_query', async (query) => {
+        bot.on('callback_query', async (query) => {
             if (query.data === 'create_team') {
                 await createTeamScene(message);
             }
@@ -31,7 +31,7 @@ export const teamInfoScene = async (message: Message, query: CallbackQuery) => {
                 await joinTeamScene(message);
             }
             if (query.data === 'back') {
-                await HomeScene(message, true, query);
+                await initialScene(message);
             }
         });
     }

@@ -1,5 +1,5 @@
 import { CallbackQuery, Message } from "typescript-telegram-bot-api/dist/types";
-import { bot } from "../bot";
+import { bot, initialScene } from "../bot";
 
 import { HomeScene } from "./homeScene";
 import { teamInfo } from "../utils/database/teamInfo";
@@ -14,7 +14,7 @@ export const teamAboutScene = async (message: Message, query: CallbackQuery, tea
 
     bot.once('callback_query', async (query) => {
         if (query.data === 'back') {
-            await HomeScene(message, true, query);
+            await initialScene(message);
         }
     });
 

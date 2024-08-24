@@ -1,6 +1,6 @@
 import { Message } from "typescript-telegram-bot-api/dist/types";
 import { joinTeam } from "../utils/database/joinTeam";
-import { bot } from "../bot";
+import { bot, initialScene } from "../bot";
 import { HomeScene } from "./homeScene";
 
 
@@ -12,7 +12,7 @@ export const joinTeamScene = async (message: Message) => {
     if (message.text && message.chat.id) {
         bot.once('message', async (message) => {
             await joinTeam(message);
-            await HomeScene(message);
+            await initialScene();
         });
 
     }
