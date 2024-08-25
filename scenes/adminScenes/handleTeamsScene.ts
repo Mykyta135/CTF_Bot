@@ -1,18 +1,20 @@
 import { CallbackQuery, Message } from "typescript-telegram-bot-api/dist/types";
-import { createInlineKeyboard } from "../../utils/keyboards/inlineKeyboards/createInlineKeyboard";
+import { createInlineKeyboard } from "../../utils/keyboards/createInlineKeyboard";
 import { PrismaClient } from "@prisma/client";
 import { bot } from "../../bot";
-import { deleteTeam } from "../../utils/database/adminsDatabase/deleteTeam";
-import { aprooveTeam } from "../../utils/database/adminsDatabase/aprooveTeam";
-import { declineTeam } from "../../utils/database/adminsDatabase/declineTeam";
+import { deleteTeam } from "../../utils/database/adminScenes/deleteTeam";
+import { aprooveTeam } from "../../utils/database/adminScenes/aprooveTeam";
+import { declineTeam } from "../../utils/database/adminScenes/declineTeam";
 import { adminScene } from "./adminScene";
 import { logOfUser } from "../../utils/logOfUser";
+import { editInlineKeyboard } from "../../utils/keyboards/editInlineKeyboard";
+import { adminLayout } from "../../utils/keyboards/adminLayout";
 
 const prisma = new PrismaClient()
 
-export const handleTeamsScene = async (message: Message, query: CallbackQuery, isUserBlocked: Map<number, boolean>) => {
+export const handleTeamsScene = async (message: Message) => {
 
-    await logOfUser(message, "Entered Handle Teams Scene");
+    logOfUser(message, "Entered Handle Teams Scene");
     try {
         await prisma.team.findMany(
 
@@ -36,7 +38,7 @@ export const handleTeamsScene = async (message: Message, query: CallbackQuery, i
         const teamId = query.data!.split('_')[2]
 
         if (query.data!.includes('delete_team')) {
-            await deleteTeam(query, teamId)
+            await deleteTeam(query, teamId, [[{ text: 'Назад', callback_data: `back` }], [{ text: "undo", callback_data: "undo" }]],)
         }
         if (query.data!.includes('aproove_team')) {
             await aprooveTeam(query, teamId)
@@ -45,7 +47,7 @@ export const handleTeamsScene = async (message: Message, query: CallbackQuery, i
             await declineTeam(query, teamId)
         }
         if (query.data === 'back') {
-            await adminScene(message, isUserBlocked)
+            await adminScene(query.message!)
         }
         await bot.answerCallbackQuery({ callback_query_id: query.id! });
     })

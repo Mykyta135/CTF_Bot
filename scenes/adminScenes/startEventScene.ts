@@ -1,6 +1,6 @@
 import { CallbackQuery } from "typescript-telegram-bot-api/dist/types";
-import { bot, initialScene } from "../../bot";
-import { startEvent } from "../../utils/database/adminsDatabase/startEvent"
+import { bot, sceneController } from "../../bot";
+import { startEvent } from "../../utils/database/adminScenes/startEvent"
 import { adminScene } from "./adminScene";
 
 export const startEventScene = async (query: CallbackQuery) => {
@@ -9,7 +9,4 @@ export const startEventScene = async (query: CallbackQuery) => {
 
     await startEvent(query.message!);
 
-    if (query.data === 'back') {
-        await initialScene(query.message!)
-    }
 }

@@ -1,15 +1,14 @@
 import { PrismaClient } from "@prisma/client"
-import { bot } from "../../bot";
-import { editInlineKeyboard } from "../../utils/keyboards/inlineKeyboards/editInlineKeyboard";
-import { CallbackQuery, Message } from "typescript-telegram-bot-api/dist/types";
-import { createInlineKeyboard } from "../../utils/keyboards/inlineKeyboards/createInlineKeyboard";
+import { bot, isUserBlockedCache, userStateCache } from "../../bot";
+import { editInlineKeyboard } from "../../utils/keyboards/editInlineKeyboard";
+import {Message } from "typescript-telegram-bot-api/dist/types";
+import { createInlineKeyboard } from "../../utils/keyboards/createInlineKeyboard";
 import { adminScene } from "./adminScene";
-import { userState } from "../../validation/UserSchema";
 
 const prisma = new PrismaClient();
 
-export const handleUsersScene = async (message: Message, isUserBlocked: Map<number, boolean>, userStateCache: Map<number, string>) => {
-    bot.removeAllListeners('message');
+export const handleUsersScene = async (message: Message) => {
+
     bot.removeAllListeners('callback_query');
 
 
@@ -47,7 +46,7 @@ export const handleUsersScene = async (message: Message, isUserBlocked: Map<numb
                     editInlineKeyboard(query, `Користувача заблоковано`, [[
                         { text: 'Назад', callback_data: `back` }
                     ]]);
-                    isUserBlocked.set(parseInt(userId), true);
+                    isUserBlockedCache.set(parseInt(userId), true);
                 });
             }
 
@@ -60,12 +59,12 @@ export const handleUsersScene = async (message: Message, isUserBlocked: Map<numb
                     data: {
                         isBlocked: false
                     }
-                }).then(() => {
-                    editInlineKeyboard(query, `Користувача розблоковано`, [[
-                        { text: 'Назад', callback_data: `back` }
-                    ]]);
-                    isUserBlocked.set(parseInt(userId), false);
-                });
+                })
+                editInlineKeyboard(query, `Користувача розблоковано`, [[
+                    { text: 'Назад', callback_data: `back` }
+                ]]);
+                isUserBlockedCache.set(parseInt(userId), false);
+
             }
             if (query.data!.includes('delete_user')) {
                 const userId = query.data!.split('_')[2];
@@ -73,17 +72,17 @@ export const handleUsersScene = async (message: Message, isUserBlocked: Map<numb
                     where: {
                         chat_id: parseInt(userId)
                     }
-                }).then((user) => {
+                }).then(() => {
                     editInlineKeyboard(query, `Користувача видалено`, [[
                         { text: 'Назад', callback_data: `back` }
                     ]]);
-                    isUserBlocked.delete(parseInt(userId));
-                    userStateCache.delete(parseInt(userId));
-                    user.userState = "registration";
+                    isUserBlockedCache.delete(parseInt(userId));
+                    userStateCache.set(parseInt(userId), "unregistered");
+
                 });
             }
             if (query.data === 'back') {
-                await adminScene(message, isUserBlocked);
+                await adminScene(message);
             }
         });
     });
