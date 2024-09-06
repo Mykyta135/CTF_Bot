@@ -1,5 +1,7 @@
 import { CallbackQuery } from "typescript-telegram-bot-api/dist/types"
 import { editInlineKeyboard } from "../../utils/keyboards/editInlineKeyboard"
+import { startMessage } from "./homeScene";
+import { bot } from "../../bot";
 
 const rulesText = `
 <u>
@@ -22,6 +24,12 @@ const rulesText = `
 `
 
 
-export const rulesScene =  (query: CallbackQuery) => {
-    editInlineKeyboard(query, rulesText, [[{ text: 'Назад', callback_data: 'back' }]]);
+export const rulesScene = (chatId: number, query: CallbackQuery, keyboardLayout: any) => {
+    editInlineKeyboard(query, rulesText, [[{ text: "Назад", callback_data: 'back' }]]);
+
+    bot.once('callback_query', (q) => {
+        if (q.data === 'back' && q.message?.chat.id === chatId) {
+            editInlineKeyboard(query, startMessage, keyboardLayout);
+        }
+    });
 }

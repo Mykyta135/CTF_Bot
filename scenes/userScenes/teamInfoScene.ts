@@ -1,6 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import { CallbackQuery, Message } from "typescript-telegram-bot-api/dist/types";
-import { bot, sceneController } from "../../bot";
+import { bot, getUserSession, UserSession } from "../../bot";
 import { teamSceneKeyboardLayout } from "../../utils/keyboards/teamSceneLayout";
 import { editInlineKeyboard } from "../../utils/keyboards/editInlineKeyboard";
 import { createTeamScene } from "./createTeamScene";
@@ -12,30 +12,47 @@ import { handleKeyboardLayout, startMessage } from "./homeScene";
 const prisma = new PrismaClient();
 
 
-export const teamInfoScene = async (message: Message, q: CallbackQuery) => {
-    const user = await getUserFromDb(message);
+export const teamInfoScene = async (chatId: number, q: CallbackQuery) => {
+    const session = getUserSession(chatId);
+    const user = await getUserFromDb(chatId);
     const teamId = user?.teamCode;
 
     if (teamId) {
         console.log('teamId', teamId);
-        teamAboutScene(message, q, teamId);
+        teamAboutScene(chatId, q, teamId);
     } else {
-        editInlineKeyboard(q, 'На даний момент ви не маєте команди:', teamSceneKeyboardLayout);
+        if (session.userState !== 'unregistered') {
 
+            editInlineKeyboard(q, 'На даний момент ви не маєте команди:', teamSceneKeyboardLayout);
+            const layout = await handleKeyboardLayout(chatId)
 
-        bot.once('callback_query', (query) => {
-            if (query.data === 'create_team') {
-                createTeamScene(message);
-            }
-            if (query.data === 'join_team') {
-                joinTeamScene(message);
-            }
+            bot.once('callback_query', (query) => {
+                if (query.message.chat.id === chatId) {
+                    if (query.data === 'create_team') {
+                        createTeamScene(chatId, session);
+                    }
+                    if (query.data === 'join_team') {
+                        joinTeamScene(chatId, session);
+                    }
 
-        });
-        if (q.data === 'back') {
-            const layout = await handleKeyboardLayout(message)
-            editInlineKeyboard(q, startMessage, layout);
+                    if (query.data === 'back') {
+
+                        editInlineKeyboard(query, startMessage, layout);
+                        // session.userState = 'registered';
+                    }
+                }
+
+            });
 
         }
+        else {
+            editInlineKeyboard(q, "Щоб створити команду або доєднатися до неї, будь ласка зареєструйтесь", []);
+        }
+        bot.once('message', async (msg) => {
+            if (msg.text === '/start') {
+                session.userState = "registered"
+            }
+        })
     }
+
 }

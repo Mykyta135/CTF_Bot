@@ -1,5 +1,5 @@
 import { PrismaClient } from "@prisma/client";
-import { bot, sceneController } from "../../../bot";
+import { bot } from "../../../bot";
 import { HomeScene } from "../../../scenes/userScenes/homeScene";
 import { Message } from "typescript-telegram-bot-api/dist/types";
 

@@ -1,24 +1,29 @@
 import { PrismaClient } from "@prisma/client"
 import { editInlineKeyboard } from "../../keyboards/editInlineKeyboard"
-import { sendMessageById } from "./sendMessageById"
-import { sceneController } from "../../../bot"
+import { sendMessageByTeamId } from "./sendMessageById"
 
 const prisma = new PrismaClient()
 
 export const declineTeam = async (query: any, teamId: string) => {
 
-    prisma.team.update({
+    await prisma.team.update({
         where: {
             tid: teamId
         },
         data: {
-            isTestValid: false
+            isTestValid: false,
         }
-    }).then(async () => {
-        
-        editInlineKeyboard(query, "Команда не затверджена", [[{ text: 'neparada', callback_data: 'neparada' }]])
-        await sendMessageById(teamId, 'Ви не пройшли тест =(');
     })
+    editInlineKeyboard(query, "Команда не затверджена", [[{ text: 'neparada', callback_data: 'neparada' }]])
+    const users = await prisma.user.findMany({
+        where: {
+            teamCode: teamId
+        },
+       
+    })
+    
+    await sendMessageByTeamId(teamId, 'Ви не пройшли тестове завання =( Не засмучуйтесь та обов\'яво рухайтесь далі!');
+
 
 
 }

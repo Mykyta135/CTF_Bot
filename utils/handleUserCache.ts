@@ -1,52 +1,54 @@
-import { Message } from "typescript-telegram-bot-api/dist/types";
-import { getUserFromDb } from "./database/userScenes/getUserFromDb";
 
-import { logOfUser } from "./logOfUser";
-import { isUserBlockedCache, userStateCache } from "../bot";
+import { UserSession, userSessions } from "../bot";
 import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-export const handleUserCache = async (message: Message) => {
+export const handleUserCache = async (chatId: number, session: UserSession) => {
+    
 
-    let userStateInfo = userStateCache.get(message.chat.id);
-    let userBlockedInfo = isUserBlockedCache.get(message.chat.id);
 
-    if (userStateInfo === undefined) {
-        logOfUser(message, 'User state not found in cache');
-        userStateInfo = await getUserState(message.chat.id);
-        if (userStateInfo === undefined) {
-            logOfUser(message, 'User state not found in db');
+    if (session.userState === undefined) {
+        // logOfUser(message, 'User state not found in cache');
+        session.userState = await getUserStateFromDb(chatId);
+        if (session.userState === undefined) {
+            // logOfUser(message, 'User state not found in db');
+            session.userState = 'unregistered';
         } else {
-            userStateCache.set(message.chat.id, userStateInfo);
+            // logOfUser(message, `User state loaded from db: ${session.userState}`);
         }
-
-    }
-    if (userBlockedInfo === undefined) {
-        logOfUser(message, 'User blocked info not found');
-        userBlockedInfo = await getUserFromDb(message).then((user) => user?.isBlocked);
-        console.log('userBlockedInfo', userBlockedInfo);
-        if (userBlockedInfo === undefined) {
-            logOfUser(message, 'User blocked info not found in db');
-            isUserBlockedCache.set(message.chat.id, false);
-        } else {
-            isUserBlockedCache.set(message.chat.id, userBlockedInfo);
-        }
-
     }
 
+    if (session.isUserBlocked === undefined) {
+        // logOfUser(message, 'User blocked info not found');
+        session.isUserBlocked = await getUserBlockedStatus(chatId);
+        if (session.isUserBlocked === undefined) {
+            // logOfUser(message, 'User blocked info not found in db');
+            session.isUserBlocked = false;
+        } else {
+            // logOfUser(message, `User blocked status loaded from db: ${session.isUserBlocked}`);
+        }
+    }
+
+    userSessions.set(chatId, session);
+    console.log('userSessions anu tuta', userSessions);
 }
 
-export const getUserState = async (chatId: number): Promise<any> => {
-
+const getUserBlockedStatus = async (chatId: number): Promise<boolean | undefined> => {
     const user = await prisma.user.findUnique({
-        where: {
-            chat_id: chatId,
-        },
+        where: { chat_id: chatId },
     });
     if (user) {
-        return user.userState;
+        return user.isBlocked;
     } else {
-        return undefined;
+        return undefined
     }
+}
+
+
+export const getUserStateFromDb = async (chatId: number): Promise<string | undefined> => {
+    const user = await prisma.user.findUnique({
+        where: { chat_id: chatId },
+    });
+    return user?.userState;
 }

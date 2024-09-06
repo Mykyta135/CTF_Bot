@@ -16,7 +16,10 @@ export const adminLayout = [
     [
         { text: 'Почати змагання', callback_data: 'start_event' }
     ],
-    // [
-    //     { text: 'Ввійти як користувач', callback_data: 'start_bot' }
-    // ],
+    [
+        { text: 'Ввійти як користувач', callback_data: 'back' }
+    ],
+    [
+        {text: "очиситти кеш", callback_data: "clear_cache"}
+    ]
 ]

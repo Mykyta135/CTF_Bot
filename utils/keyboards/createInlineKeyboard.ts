@@ -2,14 +2,14 @@ import { InlineKeyboardButton, Message } from "typescript-telegram-bot-api/dist/
 import { bot } from "../../bot";
 
 
-export const createInlineKeyboard = (message: Message, text: string, keyboardSchema: InlineKeyboardButton[][] | undefined,) => {
+export const createInlineKeyboard = async (chatId: number, text: string, keyboardSchema: InlineKeyboardButton[][] | undefined,) => {
     if (keyboardSchema !== undefined) {
-        bot.sendMessage({
-            chat_id: message.chat.id,
+        const msg = await bot.sendMessage({
+            chat_id: chatId,
             text: text,
             parse_mode: 'HTML',
             reply_markup: { inline_keyboard: keyboardSchema }
         });
-
+        return msg.message_id
     }
 }

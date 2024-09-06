@@ -1,49 +1,48 @@
 import { PrismaClient } from "@prisma/client"
 import { CallbackQuery, InlineKeyboardButton, KeyboardButton, Message } from "typescript-telegram-bot-api/dist/types"
 import { editInlineKeyboard } from "../../keyboards/editInlineKeyboard"
-import { bot } from "../../../bot";
-import { undoDeleteTeam } from "./undoDeletedTeam";
+import { sendMessageByTeamId } from "./sendMessageById"
+import { userSessions } from "../../../bot"
+
 
 const prisma = new PrismaClient()
 
-export const deletedTeams: {
-    [key: string]: {
-        users: string[],
-        teamName: string,
-        isTestValid: boolean,
-        isTestSent: boolean
-    }
-} = {};
+
 
 export const deleteTeam = async (query: CallbackQuery, teamId: string, layout: InlineKeyboardButton[][]) => {
-    const users = await prisma.user.findMany({
-        where: { teamCode: teamId },
-        select: { id: true },
-    });
-    const team = await prisma.team.findUnique({
-        where: { tid: teamId }
+
+
+    await sendMessageByTeamId(teamId, 'Ваша команда була видалена. Ви можете створити нову команду або приєднатися до іншої');
+
+
+
+    const teamMembers = await prisma.user.findMany({
+        where: {
+            teamCode: teamId
+        }
     })
-    deletedTeams[teamId] = {
-        users: users.map(user => user.id),
-        teamName: team?.name ?? "",
-        isTestValid: team?.isTestValid ?? false,
-        isTestSent: team?.isTestSent ?? false
-    },
+    teamMembers.forEach(async (member) => {
+        userSessions.set(member.chat_id, { userState: "registered", chatId: member.chat_id })
+    })
 
-        await prisma.user.updateMany({
-            where: { teamCode: teamId },
-            data: { teamCode: "" },
-        });
+    await prisma.user.updateMany({
+        where: { teamCode: teamId },
 
+        data: {
+            teamCode: "",
+            userState: "registered",
+            stateCount: 1
+        },
+    });
+    
     await prisma.team.delete({
         where: { tid: teamId },
     });
 
-    editInlineKeyboard(query, "Команда видалена", layout);
 
-    if (query.data! === 'undo') {
-        await undoDeleteTeam(query, teamId, deletedTeams[teamId]);
-    }
+    editInlineKeyboard(query, "Команда видалена", layout);
+   
+
 
 }
 

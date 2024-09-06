@@ -1,89 +1,92 @@
 import { PrismaClient } from "@prisma/client"
-import { bot, isUserBlockedCache, userStateCache } from "../../bot";
+import { bot, setUserSession, userSessions } from "../../bot";
 import { editInlineKeyboard } from "../../utils/keyboards/editInlineKeyboard";
-import {Message } from "typescript-telegram-bot-api/dist/types";
+import { Message } from "typescript-telegram-bot-api/dist/types";
 import { createInlineKeyboard } from "../../utils/keyboards/createInlineKeyboard";
 import { adminScene } from "./adminScene";
 
 const prisma = new PrismaClient();
 
-export const handleUsersScene = async (message: Message) => {
+let currentUsersListener: (query: any) => void;
 
-    bot.removeAllListeners('callback_query');
+export const handleUsersScene = async (chatId: number) => {
+    
+    const users = await prisma.user.findMany();
 
 
+    for (const user of users) {
+        createInlineKeyboard(
+            chatId,
+            `Ім'я: ${user.name}\n${user.isBlocked ? "Заблокований" : "Незаблокований"}\nКонтакти: ${user.contact}`,
+            [
+                [{ text: 'Заблокувати', callback_data: `block_user_${user.chat_id}` }],
+                [{ text: 'Розблокувати', callback_data: `unblock_user_${user.chat_id}` }],
+                [{ text: 'Видалити', callback_data: `delete_user_${user.chat_id}` }],
+               
+            ]
+        );
+    }
 
-    await prisma.user.findMany().then((users) => {
 
-        users.forEach((user) => {
-            createInlineKeyboard(message, `Ім'я: ${user.name} \n ${user.isBlocked ? "Заблокований" : "Незаблокований"} \n Контакти: ${user.contact}`, [
-                [
-                    { text: 'Заблокувати', callback_data: `block_user_${user.chat_id}` }
-                ],
-                [
-                    { text: 'Розблокувати', callback_data: `unblock_user_${user.chat_id}` }
-                ],
-                [
-                    { text: 'Видалити', callback_data: `delete_user_${user.chat_id}` }
-                ],
-                [
-                    { text: 'Назад', callback_data: `back` }
-                ]
-            ]);
-        });
-        bot.on('callback_query', async (query) => {
+    if (currentUsersListener) {
+        bot.removeListener('callback_query', currentUsersListener);
+    }
 
-            if (query.data!.includes('block_user')) {
-                const userId = query.data!.split('_')[2];
+    currentUsersListener = async (query) => {
+        if (query.message?.chat.id === chatId) {
+            const [action, , userId] = query.data!.split('_');
+
+            if (action === 'block') {
                 await prisma.user.update({
-                    where: {
-                        chat_id: parseInt(userId)
-                    },
-                    data: {
-                        isBlocked: true
-                    }
-                }).then(() => {
-                    editInlineKeyboard(query, `Користувача заблоковано`, [[
-                        { text: 'Назад', callback_data: `back` }
-                    ]]);
-                    isUserBlockedCache.set(parseInt(userId), true);
+                    where: { chat_id: parseInt(userId) },
+                    data: { isBlocked: true }
                 });
-            }
+                userSessions.set(parseInt(userId), { userState: "unregistered", isUserBlocked: true, chatId: parseInt(userId) });
+                editInlineKeyboard(query, `Користувача заблоковано`, [
+                ]);
+                await sendMessageToUser(parseInt(userId), "Ви були заблоковані адміністратором. Щоб продовжити роботу з ботом, зверніться до адміністратора. @polter01")
 
-            if (query.data!.includes('unblock_user')) {
-                const userId = query.data!.split('_')[2];
+            } else if (action === 'unblock') {
                 await prisma.user.update({
-                    where: {
-                        chat_id: parseInt(userId)
-                    },
-                    data: {
-                        isBlocked: false
-                    }
-                })
-                editInlineKeyboard(query, `Користувача розблоковано`, [[
-                    { text: 'Назад', callback_data: `back` }
-                ]]);
-                isUserBlockedCache.set(parseInt(userId), false);
-
-            }
-            if (query.data!.includes('delete_user')) {
-                const userId = query.data!.split('_')[2];
-                await prisma.user.delete({
-                    where: {
-                        chat_id: parseInt(userId)
-                    }
-                }).then(() => {
-                    editInlineKeyboard(query, `Користувача видалено`, [[
-                        { text: 'Назад', callback_data: `back` }
-                    ]]);
-                    isUserBlockedCache.delete(parseInt(userId));
-                    userStateCache.set(parseInt(userId), "unregistered");
-
+                    where: { chat_id: parseInt(userId) },
+                    data: { isBlocked: false }
                 });
+                userSessions.set(parseInt(userId), { userState: "unregistered", isUserBlocked: false, chatId: parseInt(userId) });
+                editInlineKeyboard(query, `Користувача розблоковано`, [
+                ]);
+                await sendMessageToUser(parseInt(userId), "Ви були розблоковані адміністратором.")
+            } else if (action === 'delete') {
+                await deleteUser(parseInt(userId));
+
+                editInlineKeyboard(query, `Користувача видалено`, [
+
+                ]);
+            } else if (query.data === 'admin-back') {
+                await adminScene(chatId);
             }
-            if (query.data === 'back') {
-                await adminScene(message);
-            }
-        });
+
+            await bot.answerCallbackQuery({ callback_query_id: query.id! });
+        }
+    };
+
+    bot.once('callback_query', currentUsersListener);
+};
+
+async function deleteUser(userId: number) {
+
+    await prisma.user.update({
+        where: { chat_id: userId },
+        data: { teamCode: "" }
     });
+
+    userSessions.set(userId, { userState: "unregistered", isUserBlocked: false, chatId: userId });
+
+    await prisma.user.delete({
+        where: { chat_id: userId }
+    });
+
+    await sendMessageToUser(userId, "Ваш акаунт було видалено адміністратором. Щоб продовжити роботу з ботом, використайте команду /start.");
+}
+export async function sendMessageToUser(userId: number, text: string) {
+    await bot.sendMessage({ chat_id: userId, text: text });
 }

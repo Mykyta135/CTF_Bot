@@ -1,5 +1,5 @@
 import { Message } from 'typescript-telegram-bot-api/dist/types';
-import { bot, removeAllListeners, sceneController, userStateCache } from '../../bot';
+import { bot, setUserSession, UserSession } from '../../bot';
 import { registerUser } from '../../utils/database/userScenes/registerUser';
 
 import {
@@ -14,37 +14,36 @@ import {
 
 
 } from '../../schemas/UserSchema';
-import { logOfUser } from '../../utils/logOfUser';
+import { HomeScene } from './homeScene';
 
-export const RegistrationScene = async (message: Message) => {
+export const RegistrationScene = async (chatId: number, session: UserSession) => {
+    session.userState = 'registrating';
+    // logOfUser(message, `entered registration scene ${session.userState}`);
+    await bot.sendMessage({ chat_id: chatId, text: 'Ласкаво просимо до CТF боту' });
 
 
-    logOfUser(message, "entered registration scene");
-    await bot.sendMessage({ chat_id: message.chat.id, text: 'Ласкаво просимо до CТF боту' });
-
-
-    const userName = await handleUserInput(message.chat.id, 'Введіть ім\'я', name);
+    const userName = await handleUserInput(session, chatId, 'Введіть ім\'я', name);
     console.log(`Name: ${userName}`);
 
-    const userSurname = await handleUserInput(message.chat.id, 'Введіть прізвище', surname);
+    const userSurname = await handleUserInput(session, chatId, 'Введіть прізвище', surname);
     console.log(`Surname: ${userSurname}`);
 
-    const userAge = await handleUserInput(message.chat.id, 'Введіть вік', age, true);
+    const userAge = await handleUserInput(session, chatId, 'Введіть вік', age, true);
     console.log(`Age: ${userAge}`);
 
-    const userUniversity = await handleUserInput(message.chat.id, 'Введіть університет', university);
+    const userUniversity = await handleUserInput(session, chatId, 'Введіть університет', university);
     console.log(`University: ${userUniversity}`);
 
-    const userGroup = await handleUserInput(message.chat.id, 'Введіть групу', group);
+    const userGroup = await handleUserInput(session, chatId, 'Введіть групу', group);
     console.log(`Group: ${userGroup}`);
 
-    const userCourse = await handleUserInput(message.chat.id, 'Введіть курс', course, true);
+    const userCourse = await handleUserInput(session, chatId, 'Введіть курс', course, true);
     console.log(`Course: ${userCourse}`);
 
-    const userSource = await handleUserInput(message.chat.id, 'Як дізналися про проєкт?', source);
+    const userSource = await handleUserInput(session, chatId, 'Як дізналися про проєкт?', source);
     console.log(`Source: ${userSource}`);
 
-    const userContact = await handleUserContact(message.chat.id, 'Введіть контакт', contact);
+    const userContact = await handleUserContact(session, chatId, 'Введіть контакт', contact);
     console.log(`Contact: ${userContact}`);
 
 
@@ -58,116 +57,121 @@ export const RegistrationScene = async (message: Message) => {
         source: userSource,
         contact: userContact,
         userState: 'registered',
-        chat_id: message.chat.id,
+        chat_id: chatId,
         teamCode: '',
         isTestPassed: false,
         stateCount: 1,
-    }, message.chat.id);
-
-    userStateCache.set(message.chat.id, 'registered');
+    }, chatId);
 
 
-    await sceneController(message);
+    session.userState = 'registered';
+    await HomeScene(chatId);
 
 
 };
 
 
 
-const handleUserInput = (chatId: number, promptText: string, schema: any, isNumber = false): Promise<string | number> => {
+const safeParse = async (chatId: number, schema: any, data: any): Promise<boolean> => {
+    const result = schema.safeParse(data);
+    if (!result.success) {
+        await bot.sendMessage({ chat_id: chatId, text: `${result.error.errors[0]?.message}` });
+        console.log(result.error.errors);
+        return false;
+    }
+    return true;
+};
+
+
+
+
+async function handleUserInput(session: UserSession, chatId: number, promptText: string, schema: any, isNumber = false): Promise<string | number> {
+
     return new Promise((resolve) => {
         bot.sendMessage({ chat_id: chatId, text: promptText });
 
         const messageHandler = async (message: Message) => {
-            if (message.chat.id === chatId && message.text) {
+            if (message.text === '/start' && chatId === message.chat.id && message.text) {
+                session.userState = 'unregistered';
                 bot.removeListener('message', messageHandler);
+            } else
+                if (chatId === message.chat.id && message.text) {
+                    bot.removeListener('message', messageHandler);
 
-                let input = message.text;
+                    let input = message.text;
 
-                if (isNumber) {
-                    const parsedNumber = parseInt(input);
+                    if (isNumber) {
+                        const parsedNumber = parseInt(input);
 
-                    if (await safeParse(message.chat.id, schema, parsedNumber)) {
-                        resolve(parsedNumber);
+                        if (await safeParse(chatId, schema, parsedNumber)) {
+                            resolve(parsedNumber);
+                        } else {
+                            resolve(await handleUserInput(session, chatId, promptText, schema, isNumber));
+                        }
+
                     } else {
-                        resolve(handleUserInput(chatId, promptText, schema, isNumber));
-                    }
-
-                } else {
-                    if (await safeParse(message.chat.id, schema, input)) {
-                        resolve(input);
-                    } else {
-                        resolve(handleUserInput(chatId, promptText, schema, isNumber));
+                        if (await safeParse(chatId, schema, input)) {
+                            resolve(input);
+                        } else {
+                            resolve(await handleUserInput(session, chatId, promptText, schema, isNumber));
+                        }
                     }
                 }
-
-
-            }
         };
 
-        bot.on('message', messageHandler);
+        bot.once('message', messageHandler);
     });
-};
+}
 
-const safeParse = async (chat_id: number, schema: any, data: any): Promise<boolean> => {
-    const result = schema.safeParse(data);
-    if (!result.success) {
-        await bot.sendMessage({ chat_id: chat_id, text: `${result.error.errors[0]?.message}` });
-        console.log(result.error.errors);
-        return false;
-    } else {
-        return true;
-    }
-};
+const handleUserContact = (session: UserSession, chatId: number, promptText: string, schema: any): Promise<number> => {
 
-const handleUserContact = (chatId: number, promptText: string, schema: any) => {
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
+
         bot.sendMessage({
             chat_id: chatId,
             text: promptText,
             reply_markup: {
                 keyboard: [
-                    [
-                        {
-                            text: 'Поділитися контактом',
-                            request_contact: true,
-                        }
-                    ]
+                    [{ text: 'Поділитися контактом', request_contact: true }]
                 ],
                 one_time_keyboard: true,
                 resize_keyboard: true
             }
         });
 
-        const contactHandler = async (message: any) => {
-            if (message.chat.id === chatId && message.contact) {
+        const contactHandler = async (message: Message) => {
+            if (message.text === '/start' && chatId === message.chat.id && message.text) {
+                session.userState = 'unregistered';
                 bot.removeListener('message', contactHandler);
-                const input = Number(message.contact.phone_number.replace('+', ''));
+            } else
+                if (chatId === message.chat.id && message.contact) {
 
-                if (await safeParse(message.chat.id, schema, input)) {
-                    resolve(input);
-                    bot.sendMessage({ chat_id: chatId, text: 'Дякуємо!', reply_markup: { remove_keyboard: true } });
-                } else {
-                    resolve(handleUserContact(chatId, promptText, schema));
-                }
-            } else {
-                bot.sendMessage({
-                    chat_id: chatId, text: 'Будь ласка, поділіться своїм контактом', reply_markup: {
-                        keyboard: [
-                            [
-                                {
-                                    text: 'Поділитися контактом',
-                                    request_contact: true,
-                                }
-                            ]
-                        ],
-                        one_time_keyboard: true,
-                        resize_keyboard: true
+                    const input = Number(message.contact.phone_number.replace('+', ''));
+                    if (await safeParse(chatId, schema, input)) {
+                        bot.sendMessage({ chat_id: chatId, text: 'Дякуємо!', reply_markup: { remove_keyboard: true } });
+                        resolve(input);
+                    } else {
+                        bot.removeListener('message', contactHandler);
+                        resolve(await handleUserContact(session, chatId, promptText, schema));
                     }
-                });
-            }
+                } else {
+                    bot.sendMessage({
+                        chat_id: chatId,
+                        text: 'Будь ласка, поділіться своїм контактом',
+                        reply_markup: {
+                            keyboard: [
+                                [{ text: 'Поділитися контактом', request_contact: true }]
+                            ],
+                            one_time_keyboard: true,
+                            resize_keyboard: true
+                        }
+                    });
+                    bot.removeListener('message', contactHandler);
+                    resolve(await handleUserContact(session, chatId, promptText, schema));
+                }
         };
 
-        bot.on('message', contactHandler);
+
+        bot.once('message', contactHandler);
     });
-}
+};

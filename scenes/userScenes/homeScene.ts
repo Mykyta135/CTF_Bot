@@ -1,15 +1,12 @@
 import { Message } from "typescript-telegram-bot-api/dist/types";
-import { bot } from "../../bot";
+import { bot, getUserSession, lastInlineMessageId, UserSession } from "../../bot";
 import { teamInfoScene } from "./teamInfoScene";
 
-
-import { PrismaClient, User } from "@prisma/client";
 import { eventLocationScene } from "./eventLocationScene";
-import { logOfUser } from "../../utils/logOfUser";
 import { createInlineKeyboard } from "../../utils/keyboards/createInlineKeyboard";
 import { unregisteredHomeLayout, registeredHomeLayout, onEventHomeLayout } from "../../utils/keyboards/homeSceneLayout";
 import { RegistrationScene } from "./registrationScene";
-import { getUserCache } from "../../bot";
+
 import { getUserFromDb } from "../../utils/database/userScenes/getUserFromDb";
 import { aboutEvent } from "./aboutEventScene";
 import { aboutBest } from "./aboutBestScene";
@@ -17,6 +14,7 @@ import { editInlineKeyboard } from "../../utils/keyboards/editInlineKeyboard";
 import { chatScene } from "./chatScene";
 import { testTaskScene } from "./testTaskScene";
 import { rulesScene } from "./rulesScene";
+import { currentAdminListener } from "../adminScenes/adminScene";
 export const startMessage = `
 Привіт, студенте!
 <b>Цей бот допоможе тобі:</b>
@@ -27,92 +25,60 @@ export const startMessage = `
 - Створювати та приєднувати людей до своєї команди
 - Визначити чи ти 0 чи 1
 `
-const prisma = new PrismaClient();
+
+export let handleCallbackQuery: (query: any) => void;
+
+export const HomeScene = async (chatId: number) => {
 
 
-export const HomeScene = async (message: Message) => {
+    removeUnneceseryListeners(handleCallbackQuery, currentAdminListener);
+    // logOfUser(message, "entered home scene");
 
-    bot.removeAllListeners('callback_query');
-    const { userState, isUserBlock } = getUserCache(message);
+    const keyboardLayout = await handleKeyboardLayout(chatId);
+    const currentMessage = await createInlineKeyboard(chatId, startMessage, keyboardLayout);
 
+    lastInlineMessageId.set(chatId, currentMessage!)
 
-
-    await handleUser(message, isUserBlock, userState);
-
-    const keyboardLayout = await handleKeyboardLayout(message);
-
-    logOfUser(message, "entered home scene");
-    logOfUser(message, `User state: ${userState}, User blocked: ${isUserBlock}`);
-
-    createInlineKeyboard(message, startMessage, keyboardLayout);
-
-    bot.on('callback_query', (query) => {
-        if (query.data === 'my_team') {
-            teamInfoScene(message, query);
-        }
-        if (query.data === 'event_location') {
-            eventLocationScene(query);
-        }
-
-        if (query.data === 'registration') {
-            if (userState === 'unregistered') {
-                RegistrationScene(message);
+    handleCallbackQuery = (query: any) => {
+        if (query.message.chat.id === chatId && query.message.message_id === lastInlineMessageId.get(chatId)) {
+            console.log('query message id', query.message.message_id);
+            console.log('curent message id', lastInlineMessageId.get(chatId));
+            switch (query.data) {
+                case 'my_team':
+                    teamInfoScene(chatId, query);
+                    break;
+                case 'event_location':
+                    eventLocationScene(chatId, query, keyboardLayout);
+                    break;
+                case 'registration':
+                    handleRegistrationScene(chatId, query);
+                    break;
+                case 'about_event':
+                    aboutEvent(chatId, query, keyboardLayout);
+                    break;
+                case 'about_best':
+                    aboutBest(chatId, query, keyboardLayout);
+                    break;
+                case 'about_chat':
+                    chatScene(chatId, query, keyboardLayout);
+                    break;
+                case 'test_task':
+                    testTaskScene(chatId, query, keyboardLayout);
+                    break;
+                case 'rules':
+                    rulesScene(chatId, query, keyboardLayout);
+                    break;
             }
-            else {
-                editInlineKeyboard(query, "Ви вже зареєстровані", []);
-            }
         }
+    };
 
-        if (query.data === 'about_event') {
-            aboutEvent(query);
-        }
-        if (query.data === 'about_best') {
-            aboutBest(query);
-        }
-        if (query.data === 'about_chat') {
-            chatScene(query);
-        }
-        if (query.data === 'test_task') {
-            testTaskScene(query);
-        }
-        if (query.data === 'rules') {
-            rulesScene(query);
-        }
-        if (query.data === 'back') {
-            editInlineKeyboard(query, startMessage, keyboardLayout);
-        }
-    });
+    bot.on('callback_query', handleCallbackQuery); // не once, бо потрібно стежити за всіма інлайн кнопками. Дублікації нема, бо вище видаляються всі попередні слухачі
 
 
-}
+};
 
-
-async function handleUser(message: Message, isUserBlock: boolean | undefined, userState: string | undefined) {
-    if (isUserBlock === undefined || userState === undefined) {
-        logOfUser(message, "There is no user");
-        await prisma.user.create({
-            data: {
-                chat_id: message.chat.id,
-                name: '',
-                surname: '',
-                age: 0,
-                university: '',
-                group: '',
-                course: 0,
-                source: '',
-                contact: 0,
-                userState: 'unregistered',
-            }
-        })
-    }
-    else {
-        logOfUser(message, "User loaded from DB");
-        await getUserFromDb(message);
-    }
-}
-
-export async function handleKeyboardLayout(message: Message) {
-    const user = await getUserFromDb(message);
+export async function handleKeyboardLayout(chatId: number) {
+    const user = await getUserFromDb(chatId);
     if (user !== undefined)
         switch (user!.stateCount) {
             case 0: {
@@ -125,4 +91,29 @@ export async function handleKeyboardLayout(message: Message) {
                 return onEventHomeLayout;
             }
         }
+}
+
+
+function handleRegistrationScene(chatId: number, query: any) {
+    const session = getUserSession(chatId);
+    if (session.userState === 'unregistered') {
+        RegistrationScene(chatId, session);
+    } else if (session.userState === 'registrating') {
+        editInlineKeyboard(query, "Ви вже знаходитесь на етапі реєстрації. Якщо хочете вийти, або почати спочатку, використайте команду /start", []);
+    }
+    else {
+        editInlineKeyboard(query, "ви вже зареєстровані", []);
+    }
+}
+
+export function removeUnneceseryListeners(handleCallbackQuery: any, currentAdminListener: any) {
+
+    if (handleCallbackQuery) {
+        bot.removeListener('callback_query', handleCallbackQuery);
+
+    }
+    if (currentAdminListener) {
+        bot.removeListener('callback_query', currentAdminListener);
+    }
+
 }

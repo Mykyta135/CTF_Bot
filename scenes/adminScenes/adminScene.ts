@@ -1,44 +1,49 @@
 import { Message } from "typescript-telegram-bot-api/dist/types";
-import { bot, sceneController } from "../../bot";
+import { bot, userSessions } from "../../bot";
 import { createInlineKeyboard } from "../../utils/keyboards/createInlineKeyboard"
 import { adminLayout } from "../../utils/keyboards/adminLayout";
 import { handleTeamsScene } from "./handleTeamsScene";
 import { sendMessageAll } from "../../utils/database/adminScenes/sendMessageAll";
-import { handleTeamsScenePagination } from "./handleTeamsScenePagination";
 import { startEventScene } from "./startEventScene";
-import { HomeScene } from "../userScenes/homeScene";
+import { handleCallbackQuery, HomeScene, removeUnneceseryListeners } from "../userScenes/homeScene";
 import { handleUsersScene } from "../adminScenes/handleUsersScene";
 import { logOfUser } from "../../utils/logOfUser";
-import { removeAllListeners } from "../../bot";
 
 
-export const adminScene = async (message: Message) => {
-    bot.removeAllListeners('callback_query');
+export let currentAdminListener: (query: any) => void;
 
-    logOfUser(message, "Entered Admin Scene");
+export const adminScene = async (chatId: number) => {
+    
 
-    createInlineKeyboard(message, "BeParadnishe", adminLayout)
+    // logOfUser(message, "Entered Admin Scene");
 
-    bot.on('callback_query', (query) => {
-        switch (query.data) {
-            case 'all_teams':
-                handleTeamsScene(message);
-                break;
-            case 'pagination_all_teams':
-                handleTeamsScenePagination(message, query, undefined);
-                break;
-            case 'start_event':
-                startEventScene(query);
-                break;
-            case 'all_users':
-                handleUsersScene(message);
-                break;
-            case 'send_to_all':
-                bot.sendMessage({ chat_id: message.chat.id, text: "Введіть повідомлення яке ви хочете відправити" });
-                sendMessageAll();
-                break;
+    createInlineKeyboard(chatId, "BeParadnishe", adminLayout);
+
+    removeUnneceseryListeners(handleCallbackQuery, currentAdminListener);
+
+    currentAdminListener = (query) => {
+        if (query.message?.chat.id === chatId) {
+            switch (query.data) {
+                case 'all_teams':
+                    handleTeamsScene(chatId);
+                    break;
+                case 'start_event':
+                    startEventScene(query);
+                    break;
+                case 'all_users':
+                    handleUsersScene(chatId);
+                    break;
+                case 'send_to_all':
+                    bot.sendMessage({ chat_id: chatId, text: "Введіть повідомлення яке ви хочете відправити" });
+                    sendMessageAll();
+                    break;
+                case 'clear_cache':
+                    userSessions.clear();
+                    bot.sendMessage({ chat_id: chatId, text: "Кеш очищено" });
+                    break;
+            }
         }
-    })
+    };
 
-
-}
+    bot.once('callback_query', currentAdminListener);
+};

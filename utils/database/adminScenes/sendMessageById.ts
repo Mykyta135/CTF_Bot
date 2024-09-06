@@ -3,7 +3,7 @@ import { bot } from "../../../bot";
 
 const prisma = new PrismaClient()
 
-export const sendMessageById = async (teamId: string, text: string) => {
+export const sendMessageByTeamId = async (teamId: string, text: string) => {
     await prisma.user.findMany({
         where: {
             teamCode: teamId
