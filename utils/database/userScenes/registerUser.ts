@@ -22,13 +22,13 @@ export async function registerUser(data: any, chatId: number) {
     } catch (error) {
         if (error instanceof z.ZodError) {
             console.log('Validation Error: ', error.errors);
-            bot.sendMessage({
+            await bot.sendMessage({
                 chat_id: chatId,
                 text: `Помилка валідації: ${error.errors[0].message}`
             });
         } else {
             console.log('Database Error: ', error);
-            bot.sendMessage({
+            await bot.sendMessage({
                 chat_id: chatId,
                 text: `Помилка бази даних. Спробуйте пізніше`
             });

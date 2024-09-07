@@ -1,16 +1,16 @@
 import { CallbackQuery } from "typescript-telegram-bot-api/dist/types";
-import { editInlineKeyboard } from "../../utils/keyboards/editInlineKeyboard";
+import {editInlineKeyboard } from "../../utils/keyboards/editInlineKeyboard";
 import { bot } from "../../bot";
-import { HomeScene, startMessage } from "./homeScene";
+import { startMessage } from "./homeScene";
 
-export const eventLocationScene = (chatId: number, query: CallbackQuery, keyboardLayout: any) => {
+export const eventLocationScene = async (chatId: number, query: CallbackQuery, keyboardLayout: any) => {
 
 
-    editInlineKeyboard(query, "Змагання у твоєї мамаши вдома", [[{ text: '', callback_data: 'back' }]]);
+    await editInlineKeyboard(query, "Змагання у твоєї мамаши вдома", [[{ text: '', callback_data: 'back' }]]);
 
-    bot.once('callback_query', (q) => {
+    bot.once('callback_query', async (q: CallbackQuery) => {
         if (q.data === 'back' && q.message?.chat.id === chatId) {
-            editInlineKeyboard(query, startMessage, keyboardLayout);
+            await editInlineKeyboard(query, startMessage, keyboardLayout);
         }
     });
 

@@ -7,12 +7,13 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-export const joinTeamScene = (chatId: number, session: UserSession) => {
+export const joinTeamScene = async (chatId: number, session: UserSession) => {
 
-    bot.sendMessage({ chat_id: chatId, text: 'Введіть ID команди:' });
-    bot.once('message', async (teamId) => {
-        if (teamId.text !== '/start' && teamId.message_id === chatId) {
-            joinTeam(teamId.text, chatId, session);
+    await bot.sendMessage({ chat_id: chatId, text: 'Введіть ID команди:' });
+
+    bot.once('message', async (teamId: Message) => {
+        if (teamId.text !== '/start' && teamId.chat.id === chatId) {
+            await joinTeam(teamId.text!, chatId, session);
         }
     });
 
@@ -21,8 +22,6 @@ export const joinTeamScene = (chatId: number, session: UserSession) => {
 }
 
 export const joinTeam = async (teamId: string, chatId: number, session: UserSession) => {
-
-    
     try {
         const Id = TeamIdSchema.parse(teamId);
         const team = await prisma.team.findUnique({
@@ -31,8 +30,7 @@ export const joinTeam = async (teamId: string, chatId: number, session: UserSess
             }
         })
         if (!team) {
-            bot.sendMessage({ chat_id: chatId, text: 'Команда не знайдена' });
-
+            await bot.sendMessage({ chat_id: chatId, text: 'Команда не знайдена' });
         } else {
             const members = await prisma.user.findMany({
                 where: {
@@ -51,7 +49,7 @@ export const joinTeam = async (teamId: string, chatId: number, session: UserSess
                     await bot.sendMessage({ chat_id: chatId, text: 'Вітаю! Ви приєднались до команди' });
                 })
             } else {
-                bot.sendMessage({ chat_id: chatId, text: 'Команда вже заповнена' });
+                await bot.sendMessage({ chat_id: chatId, text: 'Команда вже заповнена' });
             }
 
         }
@@ -64,11 +62,11 @@ export const joinTeam = async (teamId: string, chatId: number, session: UserSess
                 chat_id: chatId,
                 text: `Помилка валідації: ${error.errors[0].message}`
             });
-            joinTeamScene(chatId, session);
+            await joinTeamScene(chatId, session);
 
         } else {
             console.log('Database Error: ', error);
-            bot.sendMessage({
+            await bot.sendMessage({
                 chat_id: chatId,
                 text: `Помилка бази даних. Спробуйте пізніше`
             });

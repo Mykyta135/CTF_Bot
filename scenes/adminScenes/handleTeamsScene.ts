@@ -1,4 +1,4 @@
-import { Message } from "typescript-telegram-bot-api/dist/types";
+import { CallbackQuery, Message } from "typescript-telegram-bot-api/dist/types";
 import { bot } from "../../bot";
 import { PrismaClient } from "@prisma/client";
 import { logOfUser } from "../../utils/logOfUser";
@@ -12,7 +12,7 @@ const prisma = new PrismaClient();
 let currentTeamListener: (query: any) => void;
 
 export const handleTeamsScene = async (chatId: number) => {
-    
+
 
     // logOfUser(message, "Entered Handle Teams Scene");
 
@@ -20,7 +20,7 @@ export const handleTeamsScene = async (chatId: number) => {
         const teams = await prisma.team.findMany();
 
         for (const team of teams) {
-            createInlineKeyboard(
+            await createInlineKeyboard(
                 chatId,
                 `ім'я команди: ${team.name} \nЧи апрувнута команда: ${team.isTestValid ? "так" : "ні"}`,
                 [
@@ -39,7 +39,7 @@ export const handleTeamsScene = async (chatId: number) => {
         bot.removeListener('callback_query', currentTeamListener);
     }
 
-    currentTeamListener = async (query) => {
+    currentTeamListener = async (query: CallbackQuery) => {
         if (query.message?.chat.id === chatId) {
             const [action, teamId] = query.data!.split('_');
 
@@ -53,7 +53,7 @@ export const handleTeamsScene = async (chatId: number) => {
             } else if (action === 'decline-team') {
                 await declineTeam(query, teamId);
             } else if (query.data === 'admin-back') {
-                await adminScene(query.message!);
+                await adminScene(query.message.chat.id);
             }
 
             await bot.answerCallbackQuery({ callback_query_id: query.id! });

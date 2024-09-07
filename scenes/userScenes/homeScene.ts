@@ -1,4 +1,4 @@
-import { Message } from "typescript-telegram-bot-api/dist/types";
+import { CallbackQuery, Message } from "typescript-telegram-bot-api/dist/types";
 import { bot, getUserSession, lastInlineMessageId, UserSession } from "../../bot";
 import { teamInfoScene } from "./teamInfoScene";
 
@@ -10,7 +10,7 @@ import { RegistrationScene } from "./registrationScene";
 import { getUserFromDb } from "../../utils/database/userScenes/getUserFromDb";
 import { aboutEvent } from "./aboutEventScene";
 import { aboutBest } from "./aboutBestScene";
-import { editInlineKeyboard } from "../../utils/keyboards/editInlineKeyboard";
+import {editInlineKeyboard } from "../../utils/keyboards/editInlineKeyboard";
 import { chatScene } from "./chatScene";
 import { testTaskScene } from "./testTaskScene";
 import { rulesScene } from "./rulesScene";
@@ -37,36 +37,39 @@ export const HomeScene = async (chatId: number) => {
     const keyboardLayout = await handleKeyboardLayout(chatId);
     const currentMessage = await createInlineKeyboard(chatId, startMessage, keyboardLayout);
 
-    lastInlineMessageId.set(chatId, currentMessage!)
+    
 
-    handleCallbackQuery = (query: any) => {
-        if (query.message.chat.id === chatId && query.message.message_id === lastInlineMessageId.get(chatId)) {
+    handleCallbackQuery = async (query: CallbackQuery) => {
+        lastInlineMessageId.set(chatId, currentMessage!);
+
+        if (query.message?.chat.id === chatId && query.message.message_id === lastInlineMessageId.get(chatId)) {
+
             console.log('query message id', query.message.message_id);
             console.log('curent message id', lastInlineMessageId.get(chatId));
             switch (query.data) {
                 case 'my_team':
-                    teamInfoScene(chatId, query);
+                    await teamInfoScene(chatId, query);
                     break;
                 case 'event_location':
-                    eventLocationScene(chatId, query, keyboardLayout);
+                    await eventLocationScene(chatId, query, keyboardLayout);
                     break;
                 case 'registration':
-                    handleRegistrationScene(chatId, query);
+                    await handleRegistrationScene(chatId, query);
                     break;
                 case 'about_event':
-                    aboutEvent(chatId, query, keyboardLayout);
+                    await aboutEvent(chatId, query, keyboardLayout);
                     break;
                 case 'about_best':
-                    aboutBest(chatId, query, keyboardLayout);
+                    await aboutBest(chatId, query, keyboardLayout);
                     break;
                 case 'about_chat':
-                    chatScene(chatId, query, keyboardLayout);
+                    await chatScene(chatId, query, keyboardLayout);
                     break;
                 case 'test_task':
-                    testTaskScene(chatId, query, keyboardLayout);
+                    await testTaskScene(chatId, query, keyboardLayout);
                     break;
                 case 'rules':
-                    rulesScene(chatId, query, keyboardLayout);
+                    await rulesScene(chatId, query, keyboardLayout);
                     break;
             }
         }
@@ -77,8 +80,9 @@ export const HomeScene = async (chatId: number) => {
 
 };
 
-export async function handleKeyboardLayout(chatId: number) {
+export const handleKeyboardLayout = async (chatId: number) => {
     const user = await getUserFromDb(chatId);
+
     if (user !== undefined)
         switch (user!.stateCount) {
             case 0: {
@@ -94,19 +98,20 @@ export async function handleKeyboardLayout(chatId: number) {
 }
 
 
-function handleRegistrationScene(chatId: number, query: any) {
+const handleRegistrationScene = async (chatId: number, query: any) => {
     const session = getUserSession(chatId);
+
     if (session.userState === 'unregistered') {
-        RegistrationScene(chatId, session);
+        await RegistrationScene(chatId, session);
     } else if (session.userState === 'registrating') {
-        editInlineKeyboard(query, "Ви вже знаходитесь на етапі реєстрації. Якщо хочете вийти, або почати спочатку, використайте команду /start", []);
+        await editInlineKeyboard(query, "Ви вже знаходитесь на етапі реєстрації. Якщо хочете вийти, або почати спочатку, використайте команду /start", []);
     }
     else {
-        editInlineKeyboard(query, "ви вже зареєстровані", []);
+        await editInlineKeyboard(query, "ви вже зареєстровані", []);
     }
 }
 
-export function removeUnneceseryListeners(handleCallbackQuery: any, currentAdminListener: any) {
+export const removeUnneceseryListeners = (handleCallbackQuery: any, currentAdminListener: any) => {
 
     if (handleCallbackQuery) {
         bot.removeListener('callback_query', handleCallbackQuery);

@@ -1,4 +1,4 @@
-import { Message } from "typescript-telegram-bot-api/dist/types";
+import { CallbackQuery, Message } from "typescript-telegram-bot-api/dist/types";
 import { bot, userSessions } from "../../bot";
 import { createInlineKeyboard } from "../../utils/keyboards/createInlineKeyboard"
 import { adminLayout } from "../../utils/keyboards/adminLayout";
@@ -17,29 +17,29 @@ export const adminScene = async (chatId: number) => {
 
     // logOfUser(message, "Entered Admin Scene");
 
-    createInlineKeyboard(chatId, "BeParadnishe", adminLayout);
+    await createInlineKeyboard(chatId, "BeParadnishe", adminLayout);
 
     removeUnneceseryListeners(handleCallbackQuery, currentAdminListener);
 
-    currentAdminListener = (query) => {
+    currentAdminListener = async (query: CallbackQuery) => {
         if (query.message?.chat.id === chatId) {
             switch (query.data) {
                 case 'all_teams':
-                    handleTeamsScene(chatId);
+                    await handleTeamsScene(chatId);
                     break;
                 case 'start_event':
-                    startEventScene(query);
+                    await startEventScene(query);
                     break;
                 case 'all_users':
-                    handleUsersScene(chatId);
+                    await handleUsersScene(chatId);
                     break;
                 case 'send_to_all':
-                    bot.sendMessage({ chat_id: chatId, text: "Введіть повідомлення яке ви хочете відправити" });
-                    sendMessageAll();
+                    await bot.sendMessage({ chat_id: chatId, text: "Введіть повідомлення яке ви хочете відправити" });
+                    await sendMessageAll();
                     break;
                 case 'clear_cache':
                     userSessions.clear();
-                    bot.sendMessage({ chat_id: chatId, text: "Кеш очищено" });
+                    await bot.sendMessage({ chat_id: chatId, text: "Кеш очищено" });
                     break;
             }
         }

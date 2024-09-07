@@ -1,5 +1,5 @@
-import { CallbackQuery, Message } from "typescript-telegram-bot-api/dist/types";
-import { editInlineKeyboard } from "../../utils/keyboards/editInlineKeyboard";
+import { CallbackQuery } from "typescript-telegram-bot-api/dist/types";
+import {  editInlineKeyboard } from "../../utils/keyboards/editInlineKeyboard";
 import { bot } from "../../bot";
 import { startMessage } from "./homeScene";
 const aboutEventText = `
@@ -13,12 +13,13 @@ const aboutEventText = `
 `
 
 
-export const aboutEvent = (chatId: number, query: CallbackQuery, keyboardLayout: any) => {
+export const aboutEvent = async (chatId: number, query: CallbackQuery, keyboardLayout: any) => {
 
+    await editInlineKeyboard(query, aboutEventText, [[{ text: 'Назад', callback_data: 'back' }]]);
 
-    bot.once('message', (msg) => {
-        if (msg.data === 'back' && msg.message?.chat.id === chatId) {
-            
+    bot.once('callback_query', async (q: CallbackQuery) => {
+        if (q.data === 'back' && q.message?.chat.id === chatId) {
+            await editInlineKeyboard(query, startMessage, keyboardLayout);
         }
     });
 }

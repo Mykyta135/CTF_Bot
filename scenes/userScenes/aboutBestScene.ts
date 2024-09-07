@@ -18,12 +18,13 @@ HACKath0n, BEC(Best Engineering Competition), BTW(BEST Training Week) та BCI(B
 `
 
 
-export const aboutBest = (chatId: number, query: CallbackQuery, keyboardLayout: any) =>{
-    editInlineKeyboard(query, aboutBestText, [[{ text: 'Назад', callback_data: 'back' }]]);
+export const aboutBest = async (chatId: number, query: CallbackQuery, keyboardLayout: any) => {
+    await editInlineKeyboard(query, aboutBestText, [[{ text: 'Назад', callback_data: 'back' }]]);
 
-    bot.once('message', (msg) => {
-        if (msg.text === 'back' && msg.message?.chat.id === chatId) {
-            editInlineKeyboard(query, startMessage, keyboardLayout);
+    bot.once('callback_query', async (q: CallbackQuery) => {
+        if (q.data === 'back' && q.message?.chat.id === chatId) {
+            console.log('back')
+            await editInlineKeyboard(query, startMessage, keyboardLayout);
         }
     });
 }

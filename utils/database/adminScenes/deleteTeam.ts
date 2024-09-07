@@ -1,6 +1,6 @@
 import { PrismaClient } from "@prisma/client"
 import { CallbackQuery, InlineKeyboardButton, KeyboardButton, Message } from "typescript-telegram-bot-api/dist/types"
-import { editInlineKeyboard } from "../../keyboards/editInlineKeyboard"
+import {  editInlineKeyboard } from "../../keyboards/editInlineKeyboard"
 import { sendMessageByTeamId } from "./sendMessageById"
 import { userSessions } from "../../../bot"
 
@@ -22,7 +22,7 @@ export const deleteTeam = async (query: CallbackQuery, teamId: string, layout: I
         }
     })
     teamMembers.forEach(async (member) => {
-        userSessions.set(member.chat_id, { userState: "registered", chatId: member.chat_id })
+        userSessions.set(member.chat_id, { userState: "registered", chatId: member.chat_id, lastActivity: 0 });
     })
 
     await prisma.user.updateMany({
@@ -34,14 +34,14 @@ export const deleteTeam = async (query: CallbackQuery, teamId: string, layout: I
             stateCount: 1
         },
     });
-    
+
     await prisma.team.delete({
         where: { tid: teamId },
     });
 
 
-    editInlineKeyboard(query, "Команда видалена", layout);
-   
+    await editInlineKeyboard(query, "Команда видалена", layout);
+
 
 
 }

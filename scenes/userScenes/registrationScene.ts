@@ -85,49 +85,55 @@ const safeParse = async (chatId: number, schema: any, data: any): Promise<boolea
 
 
 
-async function handleUserInput(session: UserSession, chatId: number, promptText: string, schema: any, isNumber = false): Promise<string | number> {
+async function handleUserInput(
+    session: UserSession,
+    chatId: number,
+    promptText: string,
+    schema: any,
+    isNumber = false
+): Promise<string | number> {
 
-    return new Promise((resolve) => {
-        bot.sendMessage({ chat_id: chatId, text: promptText });
+    return new Promise(async (resolve) => {
+        await bot.sendMessage({ chat_id: chatId, text: promptText });
 
         const messageHandler = async (message: Message) => {
-            if (message.text === '/start' && chatId === message.chat.id && message.text) {
+            if (message.chat.id !== chatId) return;
+
+            if (message.text === '/start') {
                 session.userState = 'unregistered';
                 bot.removeListener('message', messageHandler);
-            } else
-                if (chatId === message.chat.id && message.text) {
+                return; // Stop processing
+            }
+
+            let input = message.text;
+            if (isNumber) {
+                const parsedNumber = parseInt(input!);
+                if (await safeParse(chatId, schema, parsedNumber)) {
                     bot.removeListener('message', messageHandler);
-
-                    let input = message.text;
-
-                    if (isNumber) {
-                        const parsedNumber = parseInt(input);
-
-                        if (await safeParse(chatId, schema, parsedNumber)) {
-                            resolve(parsedNumber);
-                        } else {
-                            resolve(await handleUserInput(session, chatId, promptText, schema, isNumber));
-                        }
-
-                    } else {
-                        if (await safeParse(chatId, schema, input)) {
-                            resolve(input);
-                        } else {
-                            resolve(await handleUserInput(session, chatId, promptText, schema, isNumber));
-                        }
-                    }
+                    resolve(parsedNumber);
+                } else {
+                    bot.removeListener('message', messageHandler);
+                    resolve(await handleUserInput(session, chatId, promptText, schema, isNumber));
                 }
+            } else {
+                if (await safeParse(chatId, schema, input)) {
+                    bot.removeListener('message', messageHandler);
+                    resolve(input!);
+                } else {
+                    bot.removeListener('message', messageHandler);
+                    resolve(await handleUserInput(session, chatId, promptText, schema, isNumber));
+                }
+            }
         };
 
         bot.once('message', messageHandler);
     });
 }
 
+
 const handleUserContact = (session: UserSession, chatId: number, promptText: string, schema: any): Promise<number> => {
-
-    return new Promise((resolve, reject) => {
-
-        bot.sendMessage({
+    return new Promise(async (resolve) => {
+        await bot.sendMessage({
             chat_id: chatId,
             text: promptText,
             reply_markup: {
@@ -140,22 +146,25 @@ const handleUserContact = (session: UserSession, chatId: number, promptText: str
         });
 
         const contactHandler = async (message: Message) => {
-            if (message.text === '/start' && chatId === message.chat.id && message.text) {
-                session.userState = 'unregistered';
-                bot.removeListener('message', contactHandler);
-            } else
-                if (chatId === message.chat.id && message.contact) {
+            if (message.chat.id === chatId) {
+                if (message.text === '/start') {
+                    session.userState = 'unregistered';
+                    bot.removeListener('message', contactHandler);
+                    return; 
+                }
 
+                if (message.contact) {
                     const input = Number(message.contact.phone_number.replace('+', ''));
                     if (await safeParse(chatId, schema, input)) {
-                        bot.sendMessage({ chat_id: chatId, text: 'Дякуємо!', reply_markup: { remove_keyboard: true } });
+                        await bot.sendMessage({ chat_id: chatId, text: 'Дякуємо!', reply_markup: { remove_keyboard: true } });
+                        bot.removeListener('message', contactHandler);
                         resolve(input);
                     } else {
                         bot.removeListener('message', contactHandler);
                         resolve(await handleUserContact(session, chatId, promptText, schema));
                     }
                 } else {
-                    bot.sendMessage({
+                    await bot.sendMessage({
                         chat_id: chatId,
                         text: 'Будь ласка, поділіться своїм контактом',
                         reply_markup: {
@@ -169,8 +178,10 @@ const handleUserContact = (session: UserSession, chatId: number, promptText: str
                     bot.removeListener('message', contactHandler);
                     resolve(await handleUserContact(session, chatId, promptText, schema));
                 }
-        };
+            }
 
+
+        };
 
         bot.once('message', contactHandler);
     });

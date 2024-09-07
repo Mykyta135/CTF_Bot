@@ -14,14 +14,14 @@ export const declineTeam = async (query: any, teamId: string) => {
             isTestValid: false,
         }
     })
-    editInlineKeyboard(query, "Команда не затверджена", [[{ text: 'neparada', callback_data: 'neparada' }]])
+    await editInlineKeyboard(query, "Команда не затверджена", [[{ text: 'neparada', callback_data: 'neparada' }]])
     const users = await prisma.user.findMany({
         where: {
             teamCode: teamId
         },
-       
+
     })
-    
+
     await sendMessageByTeamId(teamId, 'Ви не пройшли тестове завання =( Не засмучуйтесь та обов\'яво рухайтесь далі!');
 
 

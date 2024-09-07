@@ -1,5 +1,4 @@
-import { PrismaClient, Team } from "@prisma/client";
-import { resolve } from "path";
+import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 

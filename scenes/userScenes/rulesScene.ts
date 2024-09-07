@@ -24,12 +24,12 @@ const rulesText = `
 `
 
 
-export const rulesScene = (chatId: number, query: CallbackQuery, keyboardLayout: any) => {
-    editInlineKeyboard(query, rulesText, [[{ text: "Назад", callback_data: 'back' }]]);
+export const rulesScene = async (chatId: number, query: CallbackQuery, keyboardLayout: any) => {
+    await editInlineKeyboard(query, rulesText, [[{ text: "Назад", callback_data: 'back' }]]);
 
-    bot.once('callback_query', (q) => {
+    bot.once('callback_query', async (q: CallbackQuery) => {
         if (q.data === 'back' && q.message?.chat.id === chatId) {
-            editInlineKeyboard(query, startMessage, keyboardLayout);
+            await editInlineKeyboard(query, startMessage, keyboardLayout);
         }
     });
 }
