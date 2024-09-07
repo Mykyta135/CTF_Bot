@@ -10,23 +10,26 @@ const aboutBestText = `
 Наша місія — розвиток студентів, а візія — сила у різноманітті
 
 Щороку, ми організовуємо близько 4 - х масштабних івентів, серед яких:
-HACKath0n, BEC(Best Engineering Competition), BTW(BEST Training Week) та BCI(Best Company Insight) 
+HACKath0n, BEC(Best Engineering Competition), BTW(BEST Training Week) та BCI(Best Company Insight)
 
 Детальніше про ці івенти ви можете дізнатися в нашому інстаграмі:
 <a href='https://www.instagram.com/best_lviv/ '>https://www.instagram.com/best_lviv/ </a>
 
-`
+`;
 
+export const aboutBest = async (
+  chatId: number,
+  query: CallbackQuery,
+  keyboardLayout: any,
+) => {
+  await editInlineKeyboard(query, aboutBestText, [
+    [{ text: "Назад", callback_data: "back" }],
+  ]);
 
-export const aboutBest = async (chatId: number, query: CallbackQuery, keyboardLayout: any) => {
-    await editInlineKeyboard(query, aboutBestText, [[{ text: 'Назад', callback_data: 'back' }]]);
-
-    bot.once('callback_query', async (q: CallbackQuery) => {
-        if (q.data === 'back' && q.message?.chat.id === chatId) {
-            console.log('back')
-            await editInlineKeyboard(query, startMessage, keyboardLayout);
-        }
-    });
-}
-
-
+  bot.once("callback_query", async (q: CallbackQuery) => {
+    if (q.data === "back" && q.message?.chat.id === chatId) {
+      console.log("back");
+      await editInlineKeyboard(query, startMessage, keyboardLayout);
+    }
+  });
+};

@@ -1,5 +1,5 @@
-import { CallbackQuery } from "typescript-telegram-bot-api/dist/types"
-import { editInlineKeyboard } from "../../utils/keyboards/editInlineKeyboard"
+import { CallbackQuery } from "typescript-telegram-bot-api/dist/types";
+import { editInlineKeyboard } from "../../utils/keyboards/editInlineKeyboard";
 import { startMessage } from "./homeScene";
 import { bot } from "../../bot";
 
@@ -21,15 +21,20 @@ const rulesText = `
 
 6) Погоджуючись з правилами, учасники дають згоду на обробку їх персональних даних.
 
-`
+`;
 
+export const rulesScene = async (
+  chatId: number,
+  query: CallbackQuery,
+  keyboardLayout: any,
+) => {
+  await editInlineKeyboard(query, rulesText, [
+    [{ text: "Назад", callback_data: "back" }],
+  ]);
 
-export const rulesScene = async (chatId: number, query: CallbackQuery, keyboardLayout: any) => {
-    await editInlineKeyboard(query, rulesText, [[{ text: "Назад", callback_data: 'back' }]]);
-
-    bot.once('callback_query', async (q: CallbackQuery) => {
-        if (q.data === 'back' && q.message?.chat.id === chatId) {
-            await editInlineKeyboard(query, startMessage, keyboardLayout);
-        }
-    });
-}
+  bot.once("callback_query", async (q: CallbackQuery) => {
+    if (q.data === "back" && q.message?.chat.id === chatId) {
+      await editInlineKeyboard(query, startMessage, keyboardLayout);
+    }
+  });
+};
