@@ -1,3 +1,5 @@
+<img src=".github/cover.png" alt="CTF_Bot" width="100%">
+
 # CTF_Bot
 
 The Telegram bot for **BEST::CTF 2024**, the first offline CTF in Lviv, run by BEST Lviv. Participants registered, formed teams and got event info through it; organisers approved teams and managed users from an admin menu.
