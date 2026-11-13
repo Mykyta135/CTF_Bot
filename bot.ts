@@ -1,5 +1,6 @@
 import { TelegramBot } from "typescript-telegram-bot-api";
 import "dotenv/config";
+import { isAdminChat } from "./utils/admins";
 import { HomeScene } from "./scenes/userScenes/homeScene";
 import { adminScene } from "./scenes/adminScenes/adminScene";
 import { trackSpamFromUser } from "./utils/trackTypedMessages";
@@ -45,8 +46,9 @@ bot.on("message", async (message: Message) => {
           await HomeScene(chatId);
         }
         break;
-      case "/ParadaParadnaNaParadniyParadi":
-        await adminScene(chatId);
+      case "/admin":
+        // Only allowlisted chats get the admin panel; others see nothing.
+        if (isAdminChat(chatId)) await adminScene(chatId);
         break;
     }
   } catch (error) {

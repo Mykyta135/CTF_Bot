@@ -39,7 +39,7 @@ npx prisma generate
 npm run dev
 ```
 
-Needs `TELEGRAM_TOKEN` and a MongoDB `DATABASE_URL` in the environment (validated with Zod at startup).
+Needs `TELEGRAM_TOKEN` and a MongoDB `DATABASE_URL` in the environment (validated with Zod at startup). Admins are an allowlist of Telegram chat ids in `ADMIN_CHAT_IDS` (comma-separated); `/admin` opens the panel only for those chats, and a broadcast is taken only from the admin who started it.
 
 ## Stack
 

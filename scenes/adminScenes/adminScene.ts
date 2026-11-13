@@ -10,11 +10,12 @@ import {
   removeUnneceseryListeners,
 } from "../userScenes/homeScene";
 import { handleUsersScene } from "../adminScenes/handleUsersScene";
+import { isAdminChat } from "../../utils/admins";
 
 export let currentAdminListener: (query: any) => void;
 
 export const adminScene = async (chatId: number) => {
-  // logOfUser(message, "Entered Admin Scene");
+  if (!isAdminChat(chatId)) return;
 
   await createInlineKeyboard(chatId, "BeParadnishe", adminLayout);
 
@@ -37,7 +38,7 @@ export const adminScene = async (chatId: number) => {
             chat_id: chatId,
             text: "Введіть повідомлення яке ви хочете відправити",
           });
-          await sendMessageAll();
+          await sendMessageAll(chatId);
           break;
         case "clear_cache":
           userSessions.clear();
